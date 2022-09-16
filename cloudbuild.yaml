@@ -1,0 +1,45 @@
+# [START cloudbuild]
+
+steps:
+
+# Build the container image.
+- id: 'Build App'
+  name: 'gcr.io/cloud-builders/docker'
+  entrypoint: 'sh'
+  args: 
+  - '-c'
+  - |
+      echo ""
+      echo "*************** DOCKER BUILD APP ******************"
+      echo "********* At project: ${PROJECT_ID} **********"
+      echo "***************************************************"
+
+#cd modules/DBT parametrizado por la ruta
+      docker build -t eu.gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA .
+      docker push eu.gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA
+
+# Deploy container image to Cloud Run.
+- id: 'Deploy Cloud Run'
+  name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'sh'
+  args: 
+  - '-c'
+  - |
+      echo ""
+      echo "*************** DEPLOY CLOUD RUN ******************"
+      echo "********* At project: ${PROJECT_ID} **********"
+      echo "***************************************************"
+      echo ""
+
+      gcloud run deploy ${_SERVICE_NAME} \
+      --image=eu.gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA \
+      --region=europe-west1 \
+      --platform=managed \
+      --port=80 \
+    
+      gcloud run services update-traffic ${_SERVICE_NAME} \
+      --to-latest \
+      --platform=managed \
+      --region=europe-west1 \
+      --platform=managed
+# [END cloudbuild]
